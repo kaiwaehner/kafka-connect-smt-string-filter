@@ -26,14 +26,10 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
 import java.util.TimeZone;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class StringFilter<R extends ConnectRecord<R>> implements Transformation<R> {
 
-    private static final Pattern TOPIC = Pattern.compile("${topic}", Pattern.LITERAL);
-
-    private static final Pattern TIMESTAMP = Pattern.compile("${timestamp}", Pattern.LITERAL);
+    private static final String TOPIC = "${topic}";
 
     public static final String OVERVIEW_DOC =
             "Update the record's topic field as a function of the original topic value and the record timestamp."
@@ -42,46 +38,31 @@ public class StringFilter<R extends ConnectRecord<R>> implements Transformation<
                     + "(e.g. database table or search index name).";
 
     public static final ConfigDef CONFIG_DEF = new ConfigDef()
-            .define(ConfigName.TOPIC_FORMAT, ConfigDef.Type.STRING, "${topic}-${timestamp}", ConfigDef.Importance.HIGH,
-                    "Format string which can contain <code>${topic}</code> and <code>${timestamp}</code> as placeholders for the topic and timestamp, respectively.")
-            .define(ConfigName.TIMESTAMP_FORMAT, ConfigDef.Type.STRING, "yyyyMMdd", ConfigDef.Importance.HIGH,
-                    "Format string for the timestamp that is compatible with <code>java.text.SimpleDateFormat</code>.");
+            .define(ConfigName.TOPIC_FORMAT, ConfigDef.Type.STRING, "${topic}", ConfigDef.Importance.HIGH,
+                    "Format string which can contain <code>${topic}</code> and <code>${timestamp}</code> as placeholders for the topic and timestamp, respectively.");
 
     private interface ConfigName {
-        String TOPIC_FORMAT = "topic.format";
-        String TIMESTAMP_FORMAT = "timestamp.format";
+         String TOPIC_FORMAT = "topic.format";
     }
 
     private String topicFormat;
-    private ThreadLocal<SimpleDateFormat> timestampFormat;
 
     @Override
     public void configure(Map<String, ?> props) {
         final SimpleConfig config = new SimpleConfig(CONFIG_DEF, props);
 
         topicFormat = config.getString(ConfigName.TOPIC_FORMAT);
-
-        final String timestampFormatStr = config.getString(ConfigName.TIMESTAMP_FORMAT);
-        timestampFormat = new ThreadLocal<SimpleDateFormat>() {
-            @Override
-            protected SimpleDateFormat initialValue() {
-                final SimpleDateFormat fmt = new SimpleDateFormat(timestampFormatStr);
-                fmt.setTimeZone(TimeZone.getTimeZone("UTC"));
-                return fmt;
-            }
-        };
     }
 
     @Override
     public R apply(R record) {
-        final Long timestamp = record.timestamp();
-        if (timestamp == null) {
-            throw new DataException("Timestamp missing on record: " + record);
-        }
-        final String formattedTimestamp = timestampFormat.get().format(new Date(timestamp));
 
-        final String replace1 = TOPIC.matcher(topicFormat).replaceAll(Matcher.quoteReplacement(record.topic()));
-        final String updatedTopic = TIMESTAMP.matcher(replace1).replaceAll(Matcher.quoteReplacement(formattedTimestamp));
+
+        //final String replace1 = TOPIC.matcher(topicFormat).replaceAll(Matcher.quoteReplacement(record.topic()));
+		//final String updatedTopic = TIMESTAMP.matcher(replace1).replaceAll(Matcher.quoteReplacement(formattedTimestamp));
+		
+		final String updatedTopic = "KAI";
+
         return record.newRecord(
                 updatedTopic, record.kafkaPartition(),
                 record.keySchema(), record.key(),
@@ -92,10 +73,9 @@ public class StringFilter<R extends ConnectRecord<R>> implements Transformation<
 
     @Override
     public void close() {
-        timestampFormat = null;
     }
 
-    @Override
+  @Override
     public ConfigDef config() {
         return CONFIG_DEF;
     }
